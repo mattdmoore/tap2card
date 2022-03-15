@@ -1,0 +1,16 @@
+name: tap2card
+channels:
+- conda-forge
+dependencies:
+- python=3.9
+- psychopy=2022.1.1
+- pip
+- pip:
+  - psychtoolbox
+  - pygame
+  - pyo
+  - pyparallel; platform_system != "Windows"
+  - SoundFile; platform_system == "Windows"
+  - websocket_client
+  - mido
+  - python-rtmidi
