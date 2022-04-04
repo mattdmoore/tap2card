@@ -3,6 +3,9 @@ from numpy import roll, bincount, cumsum, zeros
 
 class Rhythm:
     def __init__(self, onsets):
+        if isinstance(onsets, str):
+            onsets = [int(x) for x in onsets]
+
         self.onsets = tuple(onsets)
         if max(onsets) > 1:
             self.__from_durations(onsets)
@@ -15,10 +18,26 @@ class Rhythm:
     def __len__(self):
         return len(self.onsets)
 
+    def __iter__(self):
+        for onset in self.onsets:
+            yield onset
+
+    def __sub__(self, other):
+        return (abs(x - y) for x, y in zip(self.onsets, other.onsets))
+
+    def __eq__(self, other):
+        if len(self) != len(other):
+            return False
+        for r in range(len(other)):
+            if sum(self - other.rotate(r)) == 0:
+                return True
+        return False
+
     def __from_durations(self, durations):
         idx = cumsum(durations) - durations
         onsets = zeros(sum(durations), dtype=int)
         onsets[idx] = 1
+
         self.onsets = tuple(onsets)
 
     def rotate(self, r):
