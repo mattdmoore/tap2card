@@ -1,6 +1,5 @@
 import mido
 import numpy as np
-from statistics import mode
 from psychopy.clock import Clock
 
 
@@ -8,21 +7,24 @@ class DrumPad:
     def __init__(self, device=''):
         # Device
         self.port = []
-        self.open_port(device)
+        self.__open_port(device)
         self.clock = Clock()
 
         # States
         self.listening = False
         self.new_tap = False
+        self.has_intervals = False
         self.tap_num = 0
 
         # Data
         self.taps = []
         self.velocities = []
+        self.intervals = []
+
         self.history = None
         self.error_history = None
 
-    def open_port(self, device):
+    def __open_port(self, device):
         inputs = mido.get_input_names()
         devices = [match for match in inputs if device in match]
         devices = list(dict.fromkeys(devices))
@@ -47,58 +49,35 @@ class DrumPad:
                 except ValueError:
                     print('Please enter a number')
 
-        self.port = mido.open_input(devices[idx], callback=self.tap)
+        self.port = mido.open_input(devices[idx], callback=self.__tap)
 
-    def tap(self, msg):
+    def __tap(self, msg, n=10):
         if self.listening and msg.type == 'note_on':
             t = self.clock.getTime()
             if msg.velocity == 0:  # ignore note off messages
                 return
             if self.taps and t - self.taps[-1] < .1:  # ignore sub-100ms taps (stick bounce)
                 return
+
             self.taps.append(t)
+            self.intervals.append(t)
             self.velocities.append(msg.velocity)
+
+            if len(self.taps) >= n:
+                ioi, strength = self.find_ioi(n=n)
+                if ioi is not None:
+                    self.has_intervals = True
+                    self.intervals[-n+1:] = np.rint(np.diff(np.array(self.taps[-n:])) * 1e3 / ioi).astype(int)
+
+                self.intervals[-n:] = [x if isinstance(x, np.int64) else None for x in self.intervals[-n:]]
             self.new_tap = True
 
-    def transcribe_rhythm(self, target_rhythm, min_n=6, memory=3):
-        if not self.listening:
-            self.listen()
-
-        n = m = len(target_rhythm)
-        if self.history is None:
-            self.history = np.zeros((memory, m))
-            self.error_history = np.zeros(m)
-
-        if n < min_n:
-            n *= (min_n * 2 - 2) // n  # multiply into suitable range
-
-        if self.new_tap and len(self.taps) > n:
-            self.new_tap = False
-            intervals = np.diff(np.array(self.taps[-(n + 1):]) * 1e3)  # convert last n taps to milliseconds
-
-            search_min = intervals.min(initial=None) / 1.5  # reduce harmonic issues by using lower bound > min / 2
-            search_max = intervals.mean()  # sensible upper bound
-            ioi, strength = self.find_ioi(n, (search_min, search_max))
-            if ioi is not None:
-                rhythm = np.round(intervals / ioi)  # use extracted IOI to scale intervals to nearest metrical unit
-
-                closest = match_rhythms(rhythm, target_rhythm, m)
-
-                error = np.roll(rhythm - intervals / ioi, closest[0])
-                self.error_history = (self.error_history + error) / 2
-                self.history[self.tap_num % memory] = np.roll(rhythm[-m:], closest[0])
-                self.tap_num += 1
-
-                print('Target rhythm:\t\t\t\t', target_rhythm)
-                print('Consensus rhythm estimate:\t', [int(mode(self.history[:, i])) for i in range(m)])
-                print('IOI: {0:.1f}ms\tConfidence: {1:.1f}%'.format(ioi, strength * 100))
-
-                print('History:')
-                print(self.history, '\n')
-
-    def find_ioi(self, n, initial_range=(100, 3000), search_resolution=20, stopping_threshold=1.05):
+    def find_ioi(self, n=8, search_resolution=20, stopping_threshold=1.05):
 
         # Binary logarithmic search with circularised IOIs
+        intervals = np.diff(self.taps[-n:]) * 1e3
+        initial_range = (intervals.min(initial=None) / 1.75, intervals.mean())
+
         taps = 2 * np.pi * np.array(self.taps[-n:]) * 1e3  # scale IOIs to millisecond radians
         critical_value = [5.297, 5.556, 5.743, 5.885, 5.996, 6.085, 6.158, 6.219, 6.271][n - 6]
 
@@ -136,9 +115,14 @@ class DrumPad:
 
         self.listening = False
         self.new_tap = False
+        self.has_intervals = False
+        self.tap_num = 0
 
         self.taps = []
         self.velocities = []
+        self.intervals = []
+        self.history = None
+        self.error_history = None
 
     def print_summary(self, beat, phase, taps, metre):
         print('Beat: {0} \tPhase: {1}'.format(beat,
