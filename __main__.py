@@ -20,10 +20,12 @@ from scripts import practice, experiment
 #       - Early stopping (long pause check)
 #   - Self-rating(?)
 
+
 def main():
     drum_pad = tap2card.DrumPad('SPD')
-    window = tap2card.Screen((1000, 1000))
+    window = tap2card.Screen((2000, 1000))
 
+    window.instructions()
     practice.main(window, drum_pad)
     experiment.main(window, drum_pad)
 
