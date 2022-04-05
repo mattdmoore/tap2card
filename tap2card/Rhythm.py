@@ -26,6 +26,8 @@ class Rhythm:
         return (abs(x - y) for x, y in zip(self.onsets, other.onsets))
 
     def __eq__(self, other):
+        if other is None:
+            return False
         if len(self) != len(other):
             return False
         for r in range(len(other)):
