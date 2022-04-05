@@ -1,4 +1,5 @@
 import tap2card
+from os import chdir, listdir
 from scripts import practice, experiment
 
 # Data format:
@@ -31,4 +32,6 @@ def main():
 
 
 if __name__ == '__main__':
+    if '__main__.py' not in listdir():  # if called as project folder
+        chdir('tap2card')
     main()
