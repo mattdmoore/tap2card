@@ -1,5 +1,5 @@
 from psychopy import event
-from tap2card.RhythmFinder import RhythmFinder
+from .RhythmFinder import RhythmFinder
 
 
 class Trial:

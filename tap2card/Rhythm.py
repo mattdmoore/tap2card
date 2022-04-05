@@ -31,7 +31,7 @@ class Rhythm:
         if len(self) != len(other):
             return False
         for r in range(len(other)):
-            if sum(self - other.rotate(r)) == 0:
+            if all([x == y for x, y in zip(self, other.rotate(r))]):
                 return True
         return False
 
