@@ -24,7 +24,7 @@ from scripts import practice, experiment
 
 def main():
     drum_pad = tap2card.DrumPad('SPD')
-    window = tap2card.Screen((2000, 1000))
+    window = tap2card.Screen(fullscr=True, allowGUI=False, monitor=1)
 
     window.instructions()
     practice.main(window, drum_pad)
