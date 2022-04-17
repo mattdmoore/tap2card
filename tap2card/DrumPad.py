@@ -67,7 +67,7 @@ class DrumPad:
                 ioi, strength = self.find_ioi(n=n)
                 if ioi is not None:
                     self.has_intervals = True
-                    self.intervals[-n+1:] = np.rint(np.diff(np.array(self.taps[-n:])) * 1e3 / ioi).astype(int)
+                    self.intervals[-n+1:] = np.rint(np.diff(np.array(self.taps[-n:])) * 1e3 / ioi).astype(np.int64)
 
                 self.intervals[-n:] = [x if isinstance(x, np.int64) else None for x in self.intervals[-n:]]
             self.new_tap = True
