@@ -6,6 +6,7 @@ from re import findall
 class Screen(visual.Window):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs, color=[1., 1., 1.], allowGUI=False)
+        self.mouse = event.Mouse(visible=False, win=self)
         self.frame_rate = self.getActualFrameRate()
 
         files = sorted(listdir('instructions'), key=lambda x: int(*findall(r'\d+', x)))
@@ -67,42 +68,33 @@ class Screen(visual.Window):
         self.flip()
         # event.waitKeys()
 
-    def uneven_taps(self):
-        self.pages[10].draw()
+    def uneven_taps(self, trial_num):
+        slide_map = {'0': 11,
+                     '1': 21,
+                     '2': 30}
+
+        idx = str(trial_num)
+        self.pages[slide_map[idx]].draw()
         self.flip()
 
-    def incorrect_rhythm(self):
-        self.pages[11].draw()
+    def incorrect_rhythm(self, trial_num, short):
+        slide_map = {'s0': 12,
+                     'l0': 13,
+                     's1': 22,
+                     'l1': 23,
+                     's2': 31,
+                     'l2': 32}
+
+        idx = 's' if short else 'l'
+        idx += str(trial_num)
+        self.pages[slide_map[idx]].draw()
         self.flip()
 
-    def incorrect_metre(self):
-        self.pages[12].draw()
-        self.flip()
+    def incorrect_metre(self, trial_num):
+        slide_map = {'0': 14,
+                     '1': 24,
+                     '2': 33}
 
-#     def rhythm_visualiser(self, rhythm, no_flip=False):
-#
-#         if isinstance(rhythm, list):
-#             for i, r in enumerate(rhythm):
-#                 boxes = self.box_notation(r, i)
-#                 [b.draw() for b in boxes]
-#
-#         else:
-#             boxes = self.box_notation(rhythm, 0)
-#             [b.draw() for b in boxes]
-#
-#         if not no_flip:
-#             self.flip()
-#
-#     def box_notation(self, rhythm, i):
-#         box_size = .05
-#         boxes = [visual.Rect(self,
-#                              box_size, box_size,
-#                              lineColor=None,
-#                              fillColor='black' if r == 1 else 'white',
-#                              pos=(x_position(j, box_size, len(rhythm)), i * box_size * 1.1))
-#                  for j, r in enumerate(rhythm)]
-#         return boxes
-#
-#
-# def x_position(i, box_size, n):
-#     return (i * box_size * 1.1) - (n * box_size * 1.1 / 2)
+        idx = str(trial_num)
+        self.pages[slide_map[idx]].draw()
+        self.flip()
