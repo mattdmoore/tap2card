@@ -1,4 +1,4 @@
-from psychopy import event
+from psychopy import event, core
 from .RhythmFinder import RhythmFinder
 
 
@@ -6,6 +6,13 @@ class Trial:
     def __init__(self, rhythm, trial_num):
         self.rhythm = rhythm
         self.trial_num = trial_num
+        self.clock = core.Clock()
+        self.errors = {
+            'ioi': 0,
+            'metre': 0,
+            'rhythm': 0
+        }
+        self.error_threshold = 3
 
     def practice(self, window, drum_pad):
         finder = RhythmFinder(self.rhythm)
@@ -20,18 +27,31 @@ class Trial:
 
                 rhythm = finder.find_rhythm(intervals)
                 ioi, strength = drum_pad.find_ioi(n=10)
+                window.show_rhythm(self.trial_num, True)
 
+                # Check taps are even
                 if ioi is None:
-                    window.uneven_taps()
-
-                elif rhythm is not None and sum(rhythm.durations()) != sum(self.rhythm.durations()):
-                    window.incorrect_metre()
-
-                elif rhythm != self.rhythm:
-                    window.incorrect_rhythm()
-
+                    self.errors['ioi'] += 1
+                    if self.errors['ioi'] > self.error_threshold:
+                        window.uneven_taps(self.trial_num)
                 else:
-                    window.show_rhythm(self.trial_num, True)
+                    self.errors['ioi'] = 0
+
+                # Check metre is correct
+                if rhythm is not None and sum(rhythm.durations()) != sum(self.rhythm.durations()):
+                    self.errors['metre'] += 1
+                    if self.errors['metre'] > self.error_threshold:
+                        window.incorrect_metre(self.trial_num)
+                else:
+                    self.errors['metre'] = 0
+
+                # Check rhythm is correct
+                if rhythm != self.rhythm:
+                    self.errors['rhythm'] += 1
+                    if self.errors['rhythm'] > self.error_threshold:
+                        window.incorrect_rhythm(self.trial_num)
+                else:
+                    self.errors['rhythm'] = 0
 
                 if ioi:
                     print('IOI:', str(round(ioi, 1)) + 'ms',
@@ -109,3 +129,6 @@ class Trial:
                           'History:', history)
         window.stop()
         event.waitKeys()
+
+    def trial_finished(self):
+        pass
