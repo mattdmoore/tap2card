@@ -1,134 +1,167 @@
-from psychopy import event, core
+from psychopy import core
 from .RhythmFinder import RhythmFinder
+from .TrialData import TrialData
 
 
 class Trial:
     def __init__(self, rhythm, trial_num):
+        # Trial variables
         self.rhythm = rhythm
         self.trial_num = trial_num
+
+        # Timeout variables
+        self.practice_duration = 180
+        self.trial_duration = 60
         self.clock = core.Clock()
+
+        # Success condition variables
+        self.correct_taps = 0
+        self.n_repetitions = 5
+
+        # Error detection variables
         self.errors = {
             'ioi': 0,
             'metre': 0,
             'rhythm': 0
         }
-        self.error_threshold = 3
+        self.error_threshold = 4
 
-    def practice(self, window, drum_pad):
+    def practice(self, window, drum_pad, participant_id):
         finder = RhythmFinder(self.rhythm)
+        iois, rhos = [], []
         window.show_rhythm(self.trial_num, True)
         drum_pad.listen()
 
-        while not event.getKeys():
+        # Wait for first tap before starting timer
+        while not drum_pad.new_tap:
+            continue
+        t0 = self.clock.getTime()
+
+        while (self.clock.getTime() - t0) < self.practice_duration:
             if drum_pad.has_intervals and drum_pad.new_tap:
                 drum_pad.new_tap = False
                 intervals = drum_pad.intervals[-len(self.rhythm.durations()) * 3:]
                 history = ' '.join([str(x) if x is not None else '-' for x in intervals])
 
                 rhythm = finder.find_rhythm(intervals)
-                ioi, strength = drum_pad.find_ioi(n=10)
-                window.show_rhythm(self.trial_num, True)
-
-                # Check taps are even
-                if ioi is None:
-                    self.errors['ioi'] += 1
-                    if self.errors['ioi'] > self.error_threshold:
-                        window.uneven_taps(self.trial_num)
-                else:
-                    self.errors['ioi'] = 0
-
-                # Check metre is correct
-                if rhythm is not None and sum(rhythm.durations()) != sum(self.rhythm.durations()):
-                    self.errors['metre'] += 1
-                    if self.errors['metre'] > self.error_threshold:
-                        window.incorrect_metre(self.trial_num)
-                else:
-                    self.errors['metre'] = 0
+                ioi, rho = drum_pad.find_ioi(n=10)
+                iois.append(ioi)
+                rhos.append(rho)
 
                 # Check rhythm is correct
-                if rhythm != self.rhythm:
-                    self.errors['rhythm'] += 1
-                    if self.errors['rhythm'] > self.error_threshold:
-                        window.incorrect_rhythm(self.trial_num)
+                if rhythm is not None and rhythm == self.rhythm:
+                    window.show_rhythm(self.trial_num, True)
+                    self.correct_taps += 1
+
+                    if self.correct_taps > len(self.rhythm.durations()) * self.n_repetitions:
+                        self.correct_taps = 0
+                        break
+
                 else:
-                    self.errors['rhythm'] = 0
+                    # Check taps are even
+                    if ioi is None or rhythm is None:
+                        self.errors['ioi'] += 1
+                        if self.errors['ioi'] > self.error_threshold:
+                            window.uneven_taps(self.trial_num)
+                    else:
+                        # Reset ioi error count
+                        self.errors['ioi'] = 0
+
+                        # Check metre is correct
+                        if sum(rhythm.durations()) != sum(self.rhythm.durations()):
+                            self.errors['metre'] += 1
+                            if self.errors['metre'] > self.error_threshold:
+                                window.incorrect_metre(self.trial_num)
+                        else:
+                            # Reset metre error count
+                            self.errors['metre'] = 0
+
+                            # Check rhythm is correct
+                            if rhythm != self.rhythm:
+                                self.errors['rhythm'] += 1
+                                if self.errors['rhythm'] > self.error_threshold:
+                                    window.incorrect_rhythm(self.trial_num,
+                                                            True if len(rhythm.durations()) > len(
+                                                                self.rhythm.durations())
+                                                            else False)
+                            else:
+                                self.errors['rhythm'] = 0
 
                 if ioi:
                     print('IOI:', str(round(ioi, 1)) + 'ms',
-                          '(' + str(round(strength * 100)) + '%)',
+                          '(' + str(round(rho * 100)) + '%)',
                           'Rhythm:', rhythm.durations() if rhythm is not None else None,
                           'Correct' if rhythm == self.rhythm else 'Incorrect',
                           'History:', history)
                 else:
                     print('IOI:', None,
-                          '(' + str(round(strength * 100)) + '%)',
+                          '(' + str(round(rho * 100)) + '%)',
                           'Rhythm:', rhythm.durations() if rhythm is not None else None,
                           'Correct' if rhythm == self.rhythm else 'Incorrect',
                           'History:', history)
 
-        window.stop(True)
-        event.waitKeys()
+        result = {'taps': drum_pad.taps,
+                  'velocities': drum_pad.velocities,
+                  'intervals': drum_pad.intervals[1:],
+                  'ioi': iois,
+                  'rho': rhos}
 
-        # For debugging
-        # import curses
-        # console = curses.initscr()
-        # curses.cbreak()
-        # curses.curs_set(0)
-        # while not event.getKeys():
-        #     if drum_pad.has_intervals and drum_pad.new_tap:
-        #         drum_pad.new_tap = False
-        #         intervals = drum_pad.intervals[-len(self.rhythm.durations()) * 3:]
-        #
-        #         rhythm = finder.find_rhythm(intervals)
-        #         ioi, strength = drum_pad.find_ioi(n=10)
-        #
-        #         console.clear()
-        #         console.addstr(0, 0, 'History: ' + ' '.join([str(x) if x is not None else '-' for x in intervals]))
-        #         if ioi is None:
-        #             console.addstr(1, 0, 'Taps are uneven')
-        #         else:
-        #             console.addstr(1, 0, 'IOI: {0:.1f} Confidence: {1:.2f}%'.format(
-        #                 ioi, strength * 100))
-        #
-        #         if not rhythm:
-        #             console.addstr(2, 0, 'Rhythm does not repeat')
-        #         else:
-        #             console.addstr(2, 0, 'Found: ' + ' '.join([str(x) for x in rhythm.durations()]) +
-        #                            ' Match: {}'.format(rhythm == self.rhythm))
-        #         console.refresh()
-        # console.clear()
-        # curses.endwin()
+        data = TrialData(participant_id, self.trial_num, result, True)
+        data.write_csv()
 
-        drum_pad.reset()
+        window.stop(self.trial_num, True)
+        drum_pad.stop()
 
-    def run(self, window, drum_pad):
+    def run(self, window, drum_pad, participant_id):
         finder = RhythmFinder(self.rhythm)
+        iois, rhos = [], []
         window.show_rhythm(self.trial_num)
         drum_pad.listen()
 
-        while not event.getKeys():
+        # Wait for first tap before starting timer
+        while not drum_pad.new_tap:
+            continue
+        t0 = self.clock.getTime()
+
+        while (self.clock.getTime() - t0) < self.trial_duration:
             if drum_pad.has_intervals and drum_pad.new_tap:
                 drum_pad.new_tap = False
                 intervals = drum_pad.intervals[-len(self.rhythm.durations()) * 3:]
                 history = ' '.join([str(x) if x is not None else '-' for x in intervals])
 
                 rhythm = finder.find_rhythm(intervals)
-                ioi, strength = drum_pad.find_ioi(n=10)
+                ioi, rho = drum_pad.find_ioi(n=10)
+                iois.append(ioi)
+                rhos.append(rho)
+
+                if rhythm is not None and rhythm == self.rhythm:
+                    self.correct_taps += 1
+
+                    if self.correct_taps > len(self.rhythm.durations()) * self.n_repetitions:
+                        self.correct_taps = 0
+                        break
 
                 if ioi:
                     print('IOI:', str(round(ioi, 1)) + 'ms',
-                          '(' + str(round(strength * 100)) + '%)',
+                          '(' + str(round(rho * 100)) + '%)',
                           'Rhythm:', rhythm.durations() if rhythm is not None else None,
                           'Correct' if rhythm == self.rhythm else 'Incorrect',
                           'History:', history)
                 else:
                     print('IOI:', None,
-                          '(' + str(round(strength * 100)) + '%)',
+                          '(' + str(round(rho * 100)) + '%)',
                           'Rhythm:', rhythm.durations() if rhythm is not None else None,
                           'Correct' if rhythm == self.rhythm else 'Incorrect',
                           'History:', history)
-        window.stop()
-        event.waitKeys()
 
-    def trial_finished(self):
-        pass
+        result = {'taps': drum_pad.taps,
+                  'velocities': drum_pad.velocities,
+                  'intervals': drum_pad.intervals[1:],
+                  'ioi': iois,
+                  'rho': rhos}
+
+        data = TrialData(participant_id, self.trial_num, result, False)
+        data.write_csv()
+
+        window.stop(self.trial_num)
+        drum_pad.stop()
