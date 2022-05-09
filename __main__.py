@@ -22,13 +22,24 @@ from scripts import practice, experiment
 #   - Self-rating(?)
 
 
-def main():
-    drum_pad = tap2card.DrumPad('SPD')
-    window = tap2card.Screen(fullscr=True, allowGUI=False, monitor=1)
+def enter_id():
+    while True:
+        try:
+            value = int(input('Please enter the participant ID number: '))
+        except ValueError:
+            print('Invalid input')
+        else:
+            return value
 
+
+def main():
+    participant_id = enter_id()
+    drum_pad = tap2card.DrumPad('SPD')
+    # window = tap2card.Screen(fullscr=True, allowGUI=False, monitor=1)
+    window = tap2card.Screen((2000, 1000))
     window.instructions()
-    practice.main(window, drum_pad)
-    experiment.main(window, drum_pad)
+    practice.main(window, drum_pad, participant_id)
+    experiment.main(window, drum_pad, participant_id)
 
 
 if __name__ == '__main__':
