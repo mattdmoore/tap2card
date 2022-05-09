@@ -9,17 +9,19 @@ class Screen(visual.Window):
         self.mouse = event.Mouse(visible=False, win=self)
         self.frame_rate = self.getActualFrameRate()
 
+        # Fix number ordering with missing leading zeros
         files = sorted(listdir('instructions'), key=lambda x: int(*findall(r'\d+', x)))
         self.pages = [visual.ImageStim(self, 'instructions/' + f) for f in files]
 
     def instructions(self):
+        last_page = 9
         navigation_dict = {'left': -1,
                            'right': 1,
                            'return': 0,
                            'escape': 'quit'}
 
         i = 0
-        while i < 9:
+        while i <= last_page:
             self.pages[i].draw()
             self.flip()
 
@@ -33,40 +35,56 @@ class Screen(visual.Window):
                 elif key == i < 2:  # First 2 pages
                     i += 1
 
-                elif 1 < i < 8:  # LR navigation
+                elif 1 < i < last_page:  # LR navigation
                     i += key
 
-                elif i == 8:  # Last page
+                elif i == last_page:  # Last page
                     if key < 0:
                         i += key
                     elif key == 0:
                         i += 1
 
+    def main_experiment(self):
+        self.pages[19].draw()
+        self.flip()
+        enter_to_continue()
+
+    def trial_complete(self, trial_num):
+        slide_map = {'0': 18,
+                     '1': 28,
+                     '2': 38}
+
+        idx = str(trial_num)
+        self.pages[slide_map[idx]].draw()
+        self.flip()
+        enter_to_continue()
+
     def show_rhythm(self, trial_num, practice=False):
-        i = 0
-        if trial_num == 0:
-            i = 9 if practice else 13
-        elif trial_num == 1:
-            i = 17 if practice else 18
-        elif trial_num == 2:
-            i = 20 if practice else 21
+        slide_map = {'p0': 10,
+                     'r0': 16,
+                     'p1': 20,
+                     'r1': 26,
+                     'p2': 29,
+                     'r2': 35}
 
-        # print('show', i)
-        self.pages[i].draw()
+        idx = 'p' if practice else 'r'
+        idx += str(trial_num)
+        self.pages[slide_map[idx]].draw()
         self.flip()
-        # event.waitKeys()
 
-    def stop(self, practice=False):
-        i = 14 if practice else 19
-        # print('stop', i)
-        self.pages[i].draw()
-        self.flip()
-        # event.waitKeys()
+    def stop(self, trial_num, practice=False):
+        slide_map = {'p0': 15,
+                     'r0': 17,
+                     'p1': 25,
+                     'r1': 27,
+                     'p2': 34,
+                     'r2': 36}
 
-    def finish(self):
-        self.pages[-1].draw()
+        idx = 'p' if practice else 'r'
+        idx += str(trial_num)
+        self.pages[slide_map[idx]].draw()
         self.flip()
-        # event.waitKeys()
+        enter_to_continue()
 
     def uneven_taps(self, trial_num):
         slide_map = {'0': 11,
@@ -98,3 +116,19 @@ class Screen(visual.Window):
         idx = str(trial_num)
         self.pages[slide_map[idx]].draw()
         self.flip()
+
+    def finished(self):
+        self.pages[37].draw()
+        self.flip()
+        enter_to_continue()
+
+
+def enter_to_continue():
+    while True:
+        press = event.waitKeys()[0]
+        if press == 'return':
+            return
+        elif press == 'escape':
+            core.quit()
+        else:
+            continue
