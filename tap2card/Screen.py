@@ -5,7 +5,7 @@ from re import findall
 
 class Screen(visual.Window):
     def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs, color=[1., 1., 1.], allowGUI=False)
+        super().__init__(*args, **kwargs, color=[1., 1., 1.])
         self.mouse = event.Mouse(visible=False, win=self)
         self.frame_rate = self.getActualFrameRate()
 

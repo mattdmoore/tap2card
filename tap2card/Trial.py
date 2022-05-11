@@ -27,6 +27,7 @@ class Trial:
         self.error_threshold = 4
 
     def practice(self, window, drum_pad, participant_id):
+        feedback_cooldown = 0
         finder = RhythmFinder(self.rhythm)
         iois, rhos = [], []
         window.show_rhythm(self.trial_num, True)
@@ -48,45 +49,56 @@ class Trial:
                 iois.append(ioi)
                 rhos.append(rho)
 
-                # Check rhythm is correct
-                if rhythm is not None and rhythm == self.rhythm:
-                    window.correct_rhythm(self.trial_num)
-                    self.correct_taps += 1
+                if intervals[-1] is not None and intervals[-1] > 9:
+                    self.errors = {
+                        'ioi': 0,
+                        'metre': 0,
+                        'rhythm': 0
+                    }
+                    window.show_rhythm(self.trial_num, True)
+                    feedback_cooldown = 10
 
-                    if self.correct_taps > len(self.rhythm.durations()) * self.n_repetitions:
-                        self.correct_taps = 0
-                        break
+                if feedback_cooldown == 0:
+                    # Check rhythm is correct
+                    if rhythm is not None and rhythm == self.rhythm:
+                        window.correct_rhythm(self.trial_num)
+                        self.correct_taps += 1
 
-                else:
-                    # Check taps are even
-                    if ioi is None or rhythm is None:
-                        self.errors['ioi'] += 1
-                        if self.errors['ioi'] > self.error_threshold:
-                            window.uneven_taps(self.trial_num)
+                        if self.correct_taps > len(self.rhythm.durations()) * self.n_repetitions:
+                            self.correct_taps = 0
+                            break
+
                     else:
-                        # Reset ioi error count
-                        self.errors['ioi'] = 0
-
-                        # Check metre is correct
-                        if sum(rhythm.durations()) != sum(self.rhythm.durations()):
-                            self.errors['metre'] += 1
-                            if self.errors['metre'] > self.error_threshold:
-                                window.incorrect_metre(self.trial_num)
+                        # Check taps are even
+                        if ioi is None or rhythm is None:
+                            self.errors['ioi'] += 1
+                            if self.errors['ioi'] > self.error_threshold:
+                                window.uneven_taps(self.trial_num)
                         else:
-                            # Reset metre error count
-                            self.errors['metre'] = 0
+                            # Reset ioi error count
+                            self.errors['ioi'] = 0
 
-                            # Check rhythm is correct
-                            if rhythm != self.rhythm:
-                                self.errors['rhythm'] += 1
-                                if self.errors['rhythm'] > self.error_threshold:
-                                    window.incorrect_rhythm(self.trial_num,
-                                                            True if len(rhythm.durations()) > len(
-                                                                self.rhythm.durations())
-                                                            else False)
+                            # Check metre is correct
+                            if sum(rhythm.durations()) != sum(self.rhythm.durations()):
+                                self.errors['metre'] += 1
+                                if self.errors['metre'] > self.error_threshold:
+                                    window.incorrect_metre(self.trial_num)
                             else:
-                                self.errors['rhythm'] = 0
-                                window.show_rhythm(self.trial_num, True)
+                                # Reset metre error count
+                                self.errors['metre'] = 0
+
+                                # Check rhythm is correct
+                                if rhythm != self.rhythm:
+                                    self.errors['rhythm'] += 1
+                                    if self.errors['rhythm'] > self.error_threshold:
+                                        window.incorrect_rhythm(self.trial_num,
+                                                                True if len(rhythm.durations()) > len(
+                                                                    self.rhythm.durations())
+                                                                else False)
+                                else:
+                                    self.errors['rhythm'] = 0
+                else:
+                    feedback_cooldown -= 1
 
                 if ioi:
                     print('IOI:', str(round(ioi, 1)) + 'ms',
@@ -101,10 +113,10 @@ class Trial:
                           'Correct' if rhythm == self.rhythm else 'Incorrect',
                           'History:', history)
 
-        result = {'taps': drum_pad.taps,
+        result = {'taps': drum_pad.taps * 1000,
                   'velocities': drum_pad.velocities,
                   'intervals': drum_pad.intervals[1:],
-                  'ioi': iois,
+                  'ioi': 1 / (iois / 1000),
                   'rho': rhos}
 
         data = TrialData(participant_id, self.trial_num, result, True)
@@ -155,10 +167,10 @@ class Trial:
                           'Correct' if rhythm == self.rhythm else 'Incorrect',
                           'History:', history)
 
-        result = {'taps': drum_pad.taps,
+        result = {'taps': drum_pad.taps * 1000,
                   'velocities': drum_pad.velocities,
                   'intervals': drum_pad.intervals[1:],
-                  'ioi': iois,
+                  'ioi': 1 / (iois / 1000),
                   'rho': rhos}
 
         data = TrialData(participant_id, self.trial_num, result, False)

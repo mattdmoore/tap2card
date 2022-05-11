@@ -35,8 +35,8 @@ def enter_id():
 def main():
     participant_id = enter_id()
     drum_pad = tap2card.DrumPad('SPD')
-    # window = tap2card.Screen(fullscr=True, allowGUI=False, monitor=1)
-    window = tap2card.Screen((2000, 1000))
+    window = tap2card.Screen(fullscr=True, allowGUI=False, screen=1)
+    # window = tap2card.Screen((2000, 1000))
     window.instructions()
     practice.main(window, drum_pad, participant_id)
     experiment.main(window, drum_pad, participant_id)
