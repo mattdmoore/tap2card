@@ -95,6 +95,15 @@ class Screen(visual.Window):
         self.pages[slide_map[idx]].draw()
         self.flip()
 
+    def correct_rhythm(self, trial_num):
+        slide_map = {'0': 38,
+                     '1': 39,
+                     '2': 40}
+
+        idx = str(trial_num)
+        self.pages[slide_map[idx]].draw()
+        self.flip()
+
     def incorrect_rhythm(self, trial_num, short):
         slide_map = {'s0': 12,
                      'l0': 13,

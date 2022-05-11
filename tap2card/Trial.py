@@ -50,7 +50,7 @@ class Trial:
 
                 # Check rhythm is correct
                 if rhythm is not None and rhythm == self.rhythm:
-                    window.show_rhythm(self.trial_num, True)
+                    window.correct_rhythm(self.trial_num)
                     self.correct_taps += 1
 
                     if self.correct_taps > len(self.rhythm.durations()) * self.n_repetitions:
@@ -86,6 +86,7 @@ class Trial:
                                                             else False)
                             else:
                                 self.errors['rhythm'] = 0
+                                window.show_rhythm(self.trial_num, True)
 
                 if ioi:
                     print('IOI:', str(round(ioi, 1)) + 'ms',
